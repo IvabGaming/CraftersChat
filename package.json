@@ -1,0 +1,8 @@
+{
+    "name": "CrafterChat",
+    "version": "1.0.0",
+    "main": "CrafterChat.html",
+    "scripts": {
+        "start": "electron ."
+    }
+}

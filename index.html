@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://ably.com" type="text/javascript"></script>
+    <title>CrafterChat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        #chat-box {
+            height:300px;
+            background: white;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            overflow-y: scroll;
+            padding: 10px;
+        }
+
+        input {
+            width: 80%;
+            padding: 10px;
+            }
+
+            button {
+                padding: 10px;
+                cursor: pointer;
+            }
+    </style>
+</head>
+<body>
+    <h2>CrafterChat</h2>
+    <div id="chat-box"></div>
+    <input type="text" id="msgInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const ably = new Ably.Realtime('EhKtPA.7Dbusg:4Q2Yiulzv10e7YiZJDm6bf9bG8tOcgqPWLZVN3v1wzk');
+        const channel = ably.channels.get('crafter-chat');
+
+        //2. Ask for a username when the app opens
+        const username = prompt('Enter your username:') || "Guest";
+
+        channel.presence.enter(username);
+
+        channel.subscribe('message', (msg) => {
+            const box = document.getElementById('chat-box');
+            const time = msg.data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            box.innerHTML += `
+            <div class="msg-row">
+                <small>[${time}]</small> <b>${msg.data.username}:</b> ${msg.data.text}
+            </div>
+            `;
+
+            box.scrollTop = box.scrollHeight;
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (text) {
+                channel.publish('message', {
+                    username: username,
+                    text: text,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                input.value = '';
+            }
+        }
+
+        document.getElementById('msgInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
