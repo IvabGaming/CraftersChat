@@ -7,7 +7,10 @@
     "start": "electron . --no-sandbox",
     "build": "electron-builder"
   },
-  "author": "IvabGaming",
+  "author": {
+    "name": "IvabGaming",
+    "email": "ivanosincorporated@gmail.com"
+  },
   "license": "ISC",
   "build": {
     "appId": "com.crafterschat.app",
