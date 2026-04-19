@@ -1,79 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://ably.com" type="text/javascript"></script>
-    <title>CrafterChat</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-
-        #chat-box {
-            height:300px;
-            background: white;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            overflow-y: scroll;
-            padding: 10px;
-        }
-
-        input {
-            width: 80%;
-            padding: 10px;
-            }
-
-            button {
-                padding: 10px;
-                cursor: pointer;
-            }
-    </style>
+  <title>CraftersChat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * {
+      font-family: 'Press Start 2P', monospace;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #1a1a1a;
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 31px, #111 31px, #111 32px
+      ),
+      repeating-linear-gradient(
+        90deg, transparent, transparent 31px, #111 31px, #111 32px
+      );
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #5a8a2a; text-shadow: 3px 3px #2a4a0a; font-size: 24px; margin-bottom: 20px; }
+    input[type="text"] { background: #000; border: 3px solid #555; color: white; padding: 8px; font-family: 'Press Start 2P', monospace; font-size: 10px; width: 300px; outline: none; }
+    button { background: #5a8a2a; border: none; border-bottom: 4px solid #2a4a0a; border-right: 4px solid #2a4a0a; border-top: 4px solid #8aba4a; border-left: 4px solid #8aba4a; color: white; padding: 8px 16px; font-family: 'Press Start 2P', monospace; font-size: 10px; cursor: pointer; margin-left: 8px; }
+    button:active { border-bottom: 4px solid #8aba4a; border-right: 4px solid #8aba4a; border-top: 4px solid #2a4a0a; border-left: 4px solid #2a4a0a; }
+    #messages { background: rgba(0,0,0,0.7); border: 3px solid #555; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px; width: 500px; }
+    #messages p { margin: 4px 0; font-size: 10px; color: #ffffa0; }
+    #whoami { color: #8aba4a; font-size: 10px; margin-bottom: 10px; }
+    #setup { margin-top: 100px; text-align: center; }
+  </style>
 </head>
 <body>
-    <h2>CrafterChat</h2>
-    <div id="chat-box"></div>
-    <input type="text" id="msgInput" placeholder="Type your message...">
-    <button onclick="sendMessage()">Send</button>
+  <div id="setup">
+    <h1>Welcome to CraftersChat!</h1>
+    <input id="usernameInput" type="text" placeholder="Username..." />
+    <button id="saveUsername">Save</button>
+  </div>
+  <div id="chat" style="display:none">
+    <h1>CraftersChat</h1>
+    <p id="whoami"></p>
+    <div id="messages"></div>
+    <input id="input" type="text" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
 
-    <script>
-        const ably = new Ably.Realtime('EhKtPA.7Dbusg:4Q2Yiulzv10e7YiZJDm6bf9bG8tOcgqPWLZVN3v1wzk');
-        const channel = ably.channels.get('crafter-chat');
+    const userFile = path.join(os.homedir(), '.crafterschat_user');
+    let username = '';
 
-        //2. Ask for a username when the app opens
-        const username = prompt('Enter your username:') || "Guest";
+    function showChat() {
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('chat').style.display = 'block';
+      document.getElementById('whoami').textContent = 'Logged in as: ' + username;
+    }
 
-        channel.presence.enter(username);
+    if (fs.existsSync(userFile)) {
+      username = fs.readFileSync(userFile, 'utf8').trim();
+      showChat();
+    }
 
-        channel.subscribe('message', (msg) => {
-            const box = document.getElementById('chat-box');
-            const time = msg.data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('saveUsername').onclick = function() {
+      const val = document.getElementById('usernameInput').value.trim();
+      if (!val) return;
+      fs.writeFileSync(userFile, val);
+      username = val;
+      showChat();
+    };
 
-            box.innerHTML += `
-            <div class="msg-row">
-                <small>[${time}]</small> <b>${msg.data.username}:</b> ${msg.data.text}
-            </div>
-            `;
+    document.getElementById('sendBtn').onclick = function() {
+      const input = document.getElementById('input');
+      ipcRenderer.send('send-message', username + ': ' + input.value);
+      input.value = '';
+    };
 
-            box.scrollTop = box.scrollHeight;
-        });
+    ipcRenderer.on('message', (event, msg) => {
+      const p = document.createElement('p');
+      p.textContent = msg;
+      document.getElementById('messages').appendChild(p);
+    });
 
-        function sendMessage() {
-            const input = document.getElementById('msgInput');
-            const text = input.value.trim();
-            if (text) {
-                channel.publish('message', {
-                    username: username,
-                    text: text,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                });
-                input.value = '';
-            }
-        }
-
-        document.getElementById('msgInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-    </script>
+    ipcRenderer.send('get-history');
+    ipcRenderer.on('history', (event, messages) => {
+      messages.forEach(msg => {
+        const p = document.createElement('p');
+        p.textContent = msg;
+        document.getElementById('messages').appendChild(p);
+      });
+    });
+  </script>
 </body>
 </html>

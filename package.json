@@ -1,8 +1,31 @@
 {
-    "name": "CrafterChat",
-    "version": "1.0.0",
-    "main": "CrafterChat.html",
-    "scripts": {
-        "start": "electron ."
+  "name": "crafterschat",
+  "version": "1.0.0",
+  "description": "A messaging app fot the Crafters",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "build": "electron-builder"
+  },
+  "author": "IvabGaming",
+  "license": "ISC",
+  "build": {
+    "appId": "com.crafterschat.app",
+    "linux": {
+      "target": "deb"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
     }
+  },
+  "dependencies": {
+    "ioredis": "^5.10.1"
+  },
+  "devDependencies": {
+    "electron": "41.2.1",
+    "electron-builder": "^26.8.1"
+  }
 }
